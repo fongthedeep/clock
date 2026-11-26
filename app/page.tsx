@@ -1,20 +1,7 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  Clock,
-  AlarmClock,
-  Timer,
-  Hourglass,
-  Globe,
-  Play,
-  Pause,
-  RotateCcw,
-  Plus,
-  Trash2,
-  CalendarDays,
-} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 type Tab = "clock" | "alarm" | "stopwatch" | "countdown" | "world";
 
@@ -26,13 +13,13 @@ type Alarm = {
   lastFired: string;
 };
 
-const tabs = [
-  { id: "clock", label: "นาฬิกา", icon: Clock },
-  { id: "alarm", label: "นาฬิกาปลุก", icon: AlarmClock },
-  { id: "stopwatch", label: "จับเวลา", icon: Timer },
-  { id: "countdown", label: "นับถอยหลัง", icon: Hourglass },
-  { id: "world", label: "เวลาโลก", icon: Globe },
-] as const;
+const tabs: { id: Tab; label: string; icon: string }[] = [
+  { id: "clock", label: "นาฬิกา", icon: "◷" },
+  { id: "alarm", label: "นาฬิกาปลุก", icon: "⏰" },
+  { id: "stopwatch", label: "จับเวลา", icon: "⏱" },
+  { id: "countdown", label: "นับถอยหลัง", icon: "⌛" },
+  { id: "world", label: "เวลาโลก", icon: "◎" },
+];
 
 const zones = [
   { name: "ประเทศไทย", city: "Bangkok", zone: "Asia/Bangkok" },
@@ -53,80 +40,88 @@ function formatTime(date: Date) {
 
 function formatDuration(ms: number) {
   const total = Math.max(0, Math.floor(ms / 1000));
-  const hours = Math.floor(total / 3600);
-  const minutes = Math.floor((total % 3600) / 60);
-  const seconds = total % 60;
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
 
-  return [hours, minutes, seconds]
+  return [h, m, s]
     .map((v) => String(v).padStart(2, "0"))
     .join(":");
 }
 
 export default function Home() {
   const [tab, setTab] = useState<Tab>("clock");
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
+  const [notice, setNotice] = useState("");
+  const [alarms, setAlarms] = useState<Alarm[]>([]);
+  const [alarmTime, setAlarmTime] = useState("07:00");
+  const [alarmMessage, setAlarmMessage] = useState("");
 
-  // Stopwatch
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [lapTimes, setLapTimes] = useState<number[]>([]);
+  const [laps, setLaps] = useState<number[]>([]);
+  const stopwatchStart = useRef(0);
+  const elapsedBeforeStart = useRef(0);
 
-  // Countdown
   const [hours, setHours] = useState("00");
   const [minutes, setMinutes] = useState("01");
   const [seconds, setSeconds] = useState("00");
   const [remaining, setRemaining] = useState(0);
   const [counting, setCounting] = useState(false);
+  const countdownEnd = useRef(0);
 
-  // Alarm
-  const [alarms, setAlarms] = useState<Alarm[]>([]);
-  const [alarmTime, setAlarmTime] = useState("07:00");
-  const [alarmMessage, setAlarmMessage] = useState("");
-
-  const [notice, setNotice] = useState("");
-
-  // Update clock
   useEffect(() => {
-    const id = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
+    setNow(new Date());
 
-    return () => clearInterval(id);
+    const id = window.setInterval(() => {
+      setNow(new Date());
+    }, 250);
+
+    return () => window.clearInterval(id);
   }, []);
 
   // Stopwatch
   useEffect(() => {
     if (!running) return;
 
-    const id = setInterval(() => {
-      setElapsed((old) => old + 30);
+    const id = window.setInterval(() => {
+      setElapsed(
+        elapsedBeforeStart.current +
+        (Date.now() - stopwatchStart.current)
+      );
     }, 30);
 
-    return () => clearInterval(id);
+    return () => window.clearInterval(id);
   }, [running]);
 
   // Countdown
   useEffect(() => {
     if (!counting) return;
 
-    const id = setInterval(() => {
-      setRemaining((old) => {
-        if (old <= 1000) {
-          setCounting(false);
-          setNotice("หมดเวลานับถอยหลังแล้ว!");
-          return 0;
-        }
+    const update = () => {
+      const left = Math.max(
+        0,
+        countdownEnd.current - Date.now()
+      );
 
-        return old - 1000;
-      });
-    }, 1000);
+      setRemaining(left);
 
-    return () => clearInterval(id);
+      if (left <= 0) {
+        setCounting(false);
+        setNotice("หมดเวลานับถอยหลังแล้ว!");
+        window.alert("หมดเวลานับถอยหลังแล้ว!");
+      }
+    };
+
+    update();
+
+    const id = window.setInterval(update, 200);
+    return () => window.clearInterval(id);
   }, [counting]);
 
   // Alarm checker
   useEffect(() => {
-    const id = setInterval(() => {
+    const id = window.setInterval(() => {
       const current = new Date();
 
       const currentTime =
@@ -135,48 +130,83 @@ export default function Home() {
 
       const today = current.toDateString();
 
-      setAlarms((old) =>
-        old.map((alarm) => {
+      setAlarms((old) => {
+        let fired: Alarm | undefined;
+
+        const updated = old.map((alarm) => {
           if (
             alarm.active &&
             alarm.time === currentTime &&
             alarm.lastFired !== today
           ) {
-            setNotice(
-              `ถึงเวลาปลุกแล้ว! ${alarm.message || "ตื่นได้แล้ว"}`
-            );
-
+            fired = alarm;
             return { ...alarm, lastFired: today };
           }
 
           return alarm;
-        })
-      );
+        });
+
+        if (fired) {
+          const message =
+            `ถึงเวลาปลุกแล้ว ${fired.time} ${fired.message || ""}`;
+
+          setNotice(message);
+          window.alert(message);
+        }
+
+        return updated;
+      });
     }, 1000);
 
-    return () => clearInterval(id);
+    return () => window.clearInterval(id);
   }, []);
 
-  // Add alarm
   function addAlarm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
-    const newAlarm: Alarm = {
-      id: Date.now(),
-      time: alarmTime,
-      message: alarmMessage,
-      active: true,
-      lastFired: "",
-    };
+    setAlarms((old) => [
+      ...old,
+      {
+        id: Date.now(),
+        time: alarmTime,
+        message: alarmMessage,
+        active: true,
+        lastFired: "",
+      },
+    ]);
 
-    setAlarms((old) => [...old, newAlarm]);
     setAlarmMessage("");
     setNotice("เพิ่มนาฬิกาปลุกเรียบร้อย");
   }
 
-  // Start countdown
+  function startStopwatch() {
+    stopwatchStart.current = Date.now();
+    elapsedBeforeStart.current = elapsed;
+    setRunning(true);
+  }
+
+  function pauseStopwatch() {
+    const value =
+      elapsedBeforeStart.current +
+      (Date.now() - stopwatchStart.current);
+
+    setElapsed(value);
+    elapsedBeforeStart.current = value;
+    setRunning(false);
+  }
+
+  function resetStopwatch() {
+    setRunning(false);
+    setElapsed(0);
+    elapsedBeforeStart.current = 0;
+    setLaps([]);
+  }
+
   function startCountdown() {
+    if (counting) return;
+
     if (remaining > 0) {
+      countdownEnd.current = Date.now() + remaining;
       setCounting(true);
       return;
     }
@@ -186,14 +216,15 @@ export default function Home() {
         Number(minutes) * 60 +
         Number(seconds)) * 1000;
 
-    if (total <= 0) {
+    if (!Number.isFinite(total) || total <= 0) {
       setNotice("กรุณากำหนดเวลามากกว่า 0");
       return;
     }
 
-    setRemaining(total);
-    setCounting(true);
     setNotice("");
+    setRemaining(total);
+    countdownEnd.current = Date.now() + total;
+    setCounting(true);
   }
 
   function resetCountdown() {
@@ -201,45 +232,37 @@ export default function Home() {
     setRemaining(0);
   }
 
-  function resetStopwatch() {
-    setRunning(false);
-    setElapsed(0);
-    setLapTimes([]);
-  }
-
-  // Analog clock
-  const angle = {
-    second: now.getSeconds() * 6,
-    minute: now.getMinutes() * 6 + now.getSeconds() * 0.1,
-    hour: (now.getHours() % 12) * 30 + now.getMinutes() * 0.5,
-  };
+  const angle = now
+    ? {
+        second: now.getSeconds() * 6 +
+          now.getMilliseconds() * 0.006,
+        minute: now.getMinutes() * 6 +
+          now.getSeconds() * 0.1,
+        hour: (now.getHours() % 12) * 30 +
+          now.getMinutes() * 0.5,
+      }
+    : { second: 0, minute: 0, hour: 0 };
 
   return (
     <main className="app">
 
-      {/* HEADER */}
       <header className="topbar">
         <div className="brand">
-          <div className="brand-icon">
-            <Clock size={25} />
-          </div>
+          <div className="brand-icon">◷</div>
 
           <div>
-            <h1>
-              DARK<span>TIME</span>
-            </h1>
+            <h1>DARK<span>TIME</span></h1>
             <p>YOUR TIME. YOUR CONTROL.</p>
           </div>
         </div>
 
         <div className="live">
-          <span /> SYSTEM ONLINE
+          <i /> SYSTEM ONLINE
         </div>
       </header>
 
-      {/* WELCOME */}
-      <div className="welcome">
-        <p>WELCOME TO DARK TIME</p>
+      <section className="welcome">
+        <p className="eyebrow">WELCOME TO DARK TIME</p>
 
         <h2>
           จัดการเวลาของคุณ <span>อย่างอิสระ</span>
@@ -248,80 +271,67 @@ export default function Home() {
         <p className="sub">
           เว็บไซต์นาฬิกาดิจิทัลและเครื่องมือจัดการเวลา
         </p>
-      </div>
+      </section>
 
-      {/* MENU */}
-      <nav className="navigation">
-        {tabs.map(({ id, label, icon: Icon }) => (
+      <nav className="navigation" aria-label="เมนูหลัก">
+        {tabs.map((item) => (
           <button
-            key={id}
-            className={tab === id ? "nav-btn active" : "nav-btn"}
-            onClick={() => setTab(id)}
+            key={item.id}
+            className={tab === item.id ? "nav-btn active" : "nav-btn"}
+            onClick={() => setTab(item.id)}
           >
-            <Icon size={18} />
-            {label}
+            <span className="nav-icon">{item.icon}</span>
+            {item.label}
           </button>
         ))}
       </nav>
 
-      {/* NOTICE */}
       {notice && (
-        <div className="notice">
+        <div className="notice" role="status">
           <span>{notice}</span>
-
-          <button onClick={() => setNotice("")}>
-            ✕
+          <button onClick={() => setNotice("")} aria-label="ปิด">
+            ×
           </button>
         </div>
       )}
 
-      {/* CONTENT */}
       <section className="content">
 
-        {/* DIGITAL CLOCK */}
         {tab === "clock" && (
           <div className="panel main-clock">
 
             <div className="panel-heading">
-              <span>
-                <Clock size={18} /> DIGITAL CLOCK
-              </span>
-
-              <span className="live">
-                <span /> LIVE
-              </span>
+              <span>◷ DIGITAL CLOCK</span>
+              <span className="live"><i /> LIVE</span>
             </div>
 
             <div className="digital-time">
-              {formatTime(now)}
+              {now ? formatTime(now) : "--:--:--"}
             </div>
 
             <div className="date">
-              <CalendarDays size={17} />
-
-              {now.toLocaleDateString("th-TH", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
+              ▦{" "}
+              {now
+                ? now.toLocaleDateString("th-TH", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                  })
+                : "กำลังโหลดเวลา..."}
             </div>
 
-            {/* ANALOG CLOCK */}
             <div className="analog">
-
               {Array.from({ length: 12 }, (_, i) => (
                 <div
                   key={i}
                   className="tick"
                   style={{
-                    transform: `rotate(${i * 30}deg) translateY(-128px)`,
+                    transform: `rotate(${i * 30}deg) translateY(-126px)`,
                   }}
                 >
                   <span
-                    style={{
-                      transform: `rotate(${-i * 30}deg)`,
-                    }}
+                    style={{ transform: `rotate(${-i * 30}deg)` }}
                   >
                     {i === 0 ? 12 : i}
                   </span>
@@ -330,23 +340,17 @@ export default function Home() {
 
               <div
                 className="hand hour-hand"
-                style={{
-                  transform: `rotate(${angle.hour}deg)`,
-                }}
+                style={{ transform: `rotate(${angle.hour}deg)` }}
               />
 
               <div
                 className="hand minute-hand"
-                style={{
-                  transform: `rotate(${angle.minute}deg)`,
-                }}
+                style={{ transform: `rotate(${angle.minute}deg)` }}
               />
 
               <div
                 className="hand second-hand"
-                style={{
-                  transform: `rotate(${angle.second}deg)`,
-                }}
+                style={{ transform: `rotate(${angle.second}deg)` }}
               />
 
               <div className="center-dot" />
@@ -358,40 +362,38 @@ export default function Home() {
           </div>
         )}
 
-        {/* ALARM */}
         {tab === "alarm" && (
           <div className="panel tool-panel">
 
             <div className="panel-heading">
-              <span>
-                <AlarmClock size={19} /> ALARM CLOCK
-              </span>
-
+              <span>⏰ ALARM CLOCK</span>
               <span className="small-tag">
                 {alarms.length} ALARMS
               </span>
             </div>
 
             <h2>ตั้งนาฬิกาปลุก</h2>
-
             <p className="sub">
               กำหนดเวลาที่ต้องการให้เว็บไซต์แจ้งเตือน
             </p>
 
             <form className="alarm-form" onSubmit={addAlarm}>
-
-              <label>เลือกเวลา</label>
+              <label htmlFor="alarm-time">เลือกเวลา</label>
 
               <input
+                id="alarm-time"
                 type="time"
                 value={alarmTime}
                 onChange={(e) => setAlarmTime(e.target.value)}
                 required
               />
 
-              <label>ข้อความแจ้งเตือน</label>
+              <label htmlFor="alarm-message">
+                ข้อความแจ้งเตือน
+              </label>
 
               <input
+                id="alarm-message"
                 type="text"
                 placeholder="เช่น ตื่นนอน / ทำการบ้าน"
                 value={alarmMessage}
@@ -399,26 +401,26 @@ export default function Home() {
               />
 
               <button className="primary-btn" type="submit">
-                <Plus size={18} /> เพิ่มนาฬิกาปลุก
+                ＋ เพิ่มนาฬิกาปลุก
               </button>
-
             </form>
 
             <div className="alarm-list">
-
               {alarms.length === 0 && (
                 <p className="empty">ยังไม่มีรายการปลุก</p>
               )}
 
               {alarms.map((alarm) => (
                 <div className="alarm-item" key={alarm.id}>
-
                   <div>
                     <strong>{alarm.time}</strong>
                     <p>{alarm.message || "ไม่มีข้อความ"}</p>
                   </div>
 
-                  <label className="switch">
+                  <label
+                    className="switch"
+                    aria-label="เปิดหรือปิดนาฬิกาปลุก"
+                  >
                     <input
                       type="checkbox"
                       checked={alarm.active}
@@ -432,7 +434,6 @@ export default function Home() {
                         )
                       }
                     />
-
                     <span />
                   </label>
 
@@ -444,33 +445,25 @@ export default function Home() {
                       )
                     }
                   >
-                    <Trash2 size={18} />
+                    ลบ
                   </button>
-
                 </div>
               ))}
-
             </div>
 
             <p className="hint">
-              หมายเหตุ: ต้องเปิดเว็บไซต์ค้างไว้เพื่อให้ระบบตรวจสอบเวลาปลุก
+              หมายเหตุ: ต้องเปิดเว็บไซต์ค้างไว้
+              เพื่อให้ระบบตรวจสอบเวลาปลุก
             </p>
-
           </div>
         )}
 
-        {/* STOPWATCH */}
         {tab === "stopwatch" && (
           <div className="panel tool-panel center-panel">
 
             <div className="panel-heading">
-              <span>
-                <Timer size={19} /> STOPWATCH
-              </span>
-
-              <span className="small-tag">
-                CHRONOMETER
-              </span>
+              <span>⏱ STOPWATCH</span>
+              <span className="small-tag">CHRONOMETER</span>
             </div>
 
             <h2>ระบบจับเวลา</h2>
@@ -480,66 +473,46 @@ export default function Home() {
             </div>
 
             <div className="timer-buttons">
-
               {!running ? (
-                <button
-                  className="primary-btn"
-                  onClick={() => setRunning(true)}
-                >
-                  <Play size={18} /> เริ่ม
+                <button className="primary-btn" onClick={startStopwatch}>
+                  ▶ เริ่ม
                 </button>
               ) : (
-                <button
-                  className="primary-btn"
-                  onClick={() => setRunning(false)}
-                >
-                  <Pause size={18} /> หยุด
+                <button className="primary-btn" onClick={pauseStopwatch}>
+                  Ⅱ หยุด
                 </button>
               )}
 
-              <button
-                className="secondary-btn"
-                onClick={resetStopwatch}
-              >
-                <RotateCcw size={18} /> รีเซ็ต
+              <button className="secondary-btn" onClick={resetStopwatch}>
+                ↻ รีเซ็ต
               </button>
 
               <button
                 className="secondary-btn"
                 disabled={!running}
-                onClick={() =>
-                  setLapTimes((old) => [...old, elapsed])
-                }
+                onClick={() => setLaps((old) => [...old, elapsed])}
               >
                 รอบ
               </button>
-
             </div>
 
             <div className="lap-list">
-              {lapTimes.map((lap, i) => (
+              {laps.map((lap, i) => (
                 <div className="lap-item" key={i}>
                   <span>รอบที่ {i + 1}</span>
                   <strong>{formatDuration(lap)}</strong>
                 </div>
               ))}
             </div>
-
           </div>
         )}
 
-        {/* COUNTDOWN */}
         {tab === "countdown" && (
           <div className="panel tool-panel center-panel">
 
             <div className="panel-heading">
-              <span>
-                <Hourglass size={19} /> COUNTDOWN
-              </span>
-
-              <span className="small-tag">
-                TIMER
-              </span>
+              <span>⌛ COUNTDOWN</span>
+              <span className="small-tag">TIMER</span>
             </div>
 
             <h2>นับถอยหลัง</h2>
@@ -549,7 +522,6 @@ export default function Home() {
             </div>
 
             <div className="count-inputs">
-
               <label>
                 ชั่วโมง
                 <input
@@ -585,24 +557,24 @@ export default function Home() {
                   onChange={(e) => setSeconds(e.target.value)}
                 />
               </label>
-
             </div>
 
             <div className="timer-buttons">
-
               {!counting ? (
-                <button
-                  className="primary-btn"
-                  onClick={startCountdown}
-                >
-                  <Play size={18} /> เริ่มนับถอยหลัง
+                <button className="primary-btn" onClick={startCountdown}>
+                  ▶ เริ่มนับถอยหลัง
                 </button>
               ) : (
                 <button
                   className="primary-btn"
-                  onClick={() => setCounting(false)}
+                  onClick={() => {
+                    setRemaining(
+                      Math.max(0, countdownEnd.current - Date.now())
+                    );
+                    setCounting(false);
+                  }}
                 >
-                  <Pause size={18} /> หยุดชั่วคราว
+                  Ⅱ หยุดชั่วคราว
                 </button>
               )}
 
@@ -610,87 +582,68 @@ export default function Home() {
                 className="secondary-btn"
                 onClick={resetCountdown}
               >
-                <RotateCcw size={18} /> รีเซ็ต
+                ↻ รีเซ็ต
               </button>
-
             </div>
-
           </div>
         )}
 
-        {/* WORLD CLOCK */}
         {tab === "world" && (
           <div className="panel tool-panel">
 
             <div className="panel-heading">
-              <span>
-                <Globe size={19} /> WORLD CLOCK
-              </span>
-
-              <span className="small-tag">
-                GLOBAL TIME
-              </span>
+              <span>◎ WORLD CLOCK</span>
+              <span className="small-tag">GLOBAL TIME</span>
             </div>
 
             <h2>เวลาทั่วโลก</h2>
-
             <p className="sub">
               เปรียบเทียบเวลาของแต่ละประเทศ
             </p>
 
             <div className="world-list">
-
               {zones.map((z) => (
                 <div className="world-item" key={z.zone}>
-
                   <div>
                     <strong>{z.name}</strong>
                     <p>{z.city}</p>
                   </div>
 
                   <div className="world-time">
-
-                    {now.toLocaleTimeString("th-TH", {
-                      timeZone: z.zone,
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      second: "2-digit",
-                      hour12: false,
-                    })}
+                    {now
+                      ? now.toLocaleTimeString("th-TH", {
+                          timeZone: z.zone,
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: false,
+                        })
+                      : "--:--:--"}
 
                     <small>
-                      {now.toLocaleDateString("th-TH", {
-                        timeZone: z.zone,
-                        day: "numeric",
-                        month: "short",
-                      })}
+                      {now
+                        ? now.toLocaleDateString("th-TH", {
+                            timeZone: z.zone,
+                            day: "numeric",
+                            month: "short",
+                          })
+                        : ""}
                     </small>
-
                   </div>
-
                 </div>
               ))}
-
             </div>
-
           </div>
         )}
-
       </section>
 
-      {/* FOOTER */}
       <footer>
-
         <div className="footer-logo">
           DARK<span>TIME</span>
         </div>
-
         <p>© 2026 DARK TIME | Created with Next.js</p>
-
         <p>เว็บไซต์จัดการเวลาในชีวิตประจำวัน</p>
-
       </footer>
-
     </main>
   );
 }

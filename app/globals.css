@@ -1,26 +1,601 @@
-@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Orbitron:wght@400;500;600;700;800&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --red: #ed2525;
+  --bg: #090909;
+  --panel: #141414;
+  --border: #302020;
+  --text: #f5f5f5;
+  --muted: #929292;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  min-height: 100%;
+  background: var(--bg);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+  font-family: 'Kanit', sans-serif;
+}
+
+button, input {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+.app {
+  max-width: 1100px;
+  width: 92%;
+  margin: auto;
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 25px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  background: #3b1013;
+  color: var(--red);
+  padding: 10px 15px;
+  border-radius: 12px;
+  font-size: 30px;
+}
+
+.brand h1, .footer-logo {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 23px;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.brand h1 span, .footer-logo span {
+  color: var(--red);
+}
+
+.brand p {
+  color: var(--muted);
+  font-size: 9px;
+  letter-spacing: 2px;
+}
+
+.live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #bdbdbd;
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.live i {
+  width: 8px;
+  height: 8px;
+  background: #35d878;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #35d878;
+}
+
+.welcome {
+  text-align: center;
+  padding: 48px 10px 30px;
+}
+
+.eyebrow {
+  color: var(--red);
+  font-size: 11px;
+  letter-spacing: 4px;
+}
+
+.welcome h2 {
+  font-size: clamp(23px, 4vw, 36px);
+  margin: 10px 0;
+}
+
+.welcome h2 span {
+  color: var(--red);
+}
+
+.sub {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.navigation {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: #121212;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: transparent;
+  color: #aaa;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 12px 17px;
+  transition: .2s;
+}
+
+.nav-btn:hover {
+  color: white;
+  background: #292020;
+}
+
+.nav-btn.active {
+  background: #421417;
+  border-color: #82232b;
+  color: #ff5555;
+}
+
+.nav-icon {
+  font-size: 18px;
+}
+
+.content {
+  padding: 25px 0;
+}
+
+.panel {
+  background: linear-gradient(145deg, #171717, #101010);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 30px;
+  box-shadow: 0 15px 50px #0008;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--red);
+  font-family: 'Orbitron', sans-serif;
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.small-tag {
+  color: #aaa;
+  background: #272020;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-size: 10px;
+}
+
+.main-clock {
+  text-align: center;
+  padding: 35px 20px;
+  overflow: hidden;
+}
+
+.digital-time, .timer-display, .count-display {
+  font-family: 'Orbitron', sans-serif;
+  font-size: clamp(40px, 9vw, 76px);
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: #ff3838;
+  text-shadow: 0 0 25px #e51b1b55;
+  margin-top: 40px;
+  font-variant-numeric: tabular-nums;
+}
+
+.date {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #aaa;
+  margin-top: 12px;
+}
+
+.analog {
+  width: 290px;
+  height: 290px;
+  border: 6px solid #8f1b22;
+  border-radius: 50%;
+  margin: 45px auto 20px;
+  position: relative;
+  background: radial-gradient(circle, #252020, #101010);
+  box-shadow: 0 0 30px #b3131b30, inset 0 0 30px #000;
+}
+
+.analog:before {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border: 1px solid #472024;
+  border-radius: 50%;
+}
+
+.tick {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  height: 12px;
+  width: 25px;
+  margin-left: -12.5px;
+  margin-top: -6px;
+  display: flex;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+}
+
+.tick span {
+  position: absolute;
+}
+
+.hand {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  transform-origin: bottom;
+  border-radius: 10px;
+  z-index: 3;
+}
+
+.hour-hand {
+  width: 6px;
+  height: 75px;
+  background: white;
+  margin-left: -3px;
+}
+
+.minute-hand {
+  width: 4px;
+  height: 105px;
+  background: #ff5555;
+  margin-left: -2px;
+}
+
+.second-hand {
+  width: 2px;
+  height: 115px;
+  background: #ff2020;
+  margin-left: -1px;
+}
+
+.center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 13px;
+  height: 13px;
+  background: white;
+  border: 3px solid var(--red);
+  border-radius: 50%;
+  z-index: 5;
+}
+
+.clock-caption {
+  color: #777;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 10px;
+  letter-spacing: 3px;
+}
+
+.tool-panel {
+  max-width: 750px;
+  margin: auto;
+}
+
+.tool-panel h2 {
+  margin-top: 30px;
+  font-size: 25px;
+}
+
+.alarm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 25px;
+}
+
+.alarm-form label {
+  font-size: 13px;
+  color: #ccc;
+}
+
+.alarm-form input, .count-inputs input {
+  background: #090909;
+  border: 1px solid #393030;
+  color: white;
+  border-radius: 9px;
+  padding: 13px;
+  outline: none;
+  width: 100%;
+}
+
+.alarm-form input:focus,
+.count-inputs input:focus {
+  border-color: var(--red);
+}
+
+.primary-btn, .secondary-btn {
+  border: none;
+  border-radius: 9px;
+  padding: 12px 20px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: .2s;
+}
+
+.primary-btn {
+  background: linear-gradient(120deg, #e52a2a, #9c1019);
+  color: white;
+  font-weight: 500;
+}
+
+.primary-btn:hover {
+  box-shadow: 0 0 20px #e52a2a55;
+  transform: translateY(-2px);
+}
+
+.secondary-btn {
+  background: #282222;
+  color: white;
+  border: 1px solid #443030;
+}
+
+.secondary-btn:hover {
+  background: #3c2424;
+}
+
+.secondary-btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+}
+
+.alarm-list, .world-list, .lap-list {
+  margin-top: 25px;
+}
+
+.alarm-item, .world-item, .lap-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 5px;
+  border-bottom: 1px solid var(--border);
+}
+
+.alarm-item strong {
+  font-family: 'Orbitron', sans-serif;
+  font-size: 25px;
+  color: #ff5555;
+}
+
+.alarm-item p, .world-item p {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.delete-btn {
+  color: #ff7777;
+  background: #321719;
+  border: 1px solid #633035;
+  border-radius: 7px;
+  padding: 7px 12px;
+}
+
+.switch {
+  position: relative;
+  width: 42px;
+  height: 23px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.switch span {
+  position: absolute;
+  inset: 0;
+  border-radius: 20px;
+  background: #444;
+  cursor: pointer;
+}
+
+.switch span:before {
+  content: '';
+  position: absolute;
+  height: 17px;
+  width: 17px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: .2s;
+}
+
+.switch input:checked + span {
+  background: var(--red);
+}
+
+.switch input:checked + span:before {
+  transform: translateX(19px);
+}
+
+.center-panel {
+  text-align: center;
+}
+
+.timer-display, .count-display {
+  font-size: clamp(35px, 8vw, 65px);
+  margin: 45px 0;
+}
+
+.timer-buttons {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.count-inputs {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin: 25px 0;
+}
+
+.count-inputs label {
+  color: #aaa;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100px;
+}
+
+.count-inputs input {
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 20px;
+}
+
+.lap-item strong {
+  font-family: 'Orbitron', sans-serif;
+  color: #ff5555;
+}
+
+.world-item strong {
+  font-size: 17px;
+}
+
+.world-time {
+  color: #ff5555;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 22px;
+  text-align: right;
+}
+
+.world-time small {
+  display: block;
+  color: #888;
+  font-family: 'Kanit', sans-serif;
+  font-size: 11px;
+}
+
+.notice {
+  margin-top: 18px;
+  padding: 14px 18px;
+  background: #381518;
+  border: 1px solid #a52a32;
+  color: #ffaaaa;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.notice button {
+  color: white;
+  background: transparent;
+  border: none;
+  font-size: 20px;
+}
+
+.empty, .hint {
+  color: #777;
+  font-size: 12px;
+  text-align: center;
+  margin: 15px 0;
+}
+
+footer {
+  text-align: center;
+  border-top: 1px solid var(--border);
+  padding: 30px 10px;
+  color: #777;
+  font-size: 12px;
+  line-height: 2;
+}
+
+.footer-logo {
+  font-size: 17px;
+  color: white;
+}
+
+@media(max-width: 600px) {
+  .app {
+    width: 94%;
+  }
+
+  .topbar {
+    padding: 18px 0;
+  }
+
+  .brand h1 {
+    font-size: 17px;
+  }
+
+  .live {
+    font-size: 9px;
+  }
+
+  .nav-btn {
+    padding: 10px;
+    font-size: 12px;
+    flex: 1 1 30%;
+  }
+
+  .panel {
+    padding: 20px 14px;
+  }
+
+  .analog {
+    width: 250px;
+    height: 250px;
+  }
+
+  .hour-hand {
+    height: 65px;
+  }
+
+  .minute-hand {
+    height: 90px;
+  }
+
+  .second-hand {
+    height: 100px;
+  }
+
+  .timer-buttons button {
+    padding: 11px 13px;
+  }
 }
