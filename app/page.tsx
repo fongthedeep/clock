@@ -5,6 +5,12 @@ import { useEffect, useRef, useState } from "react";
 
 type Tab = "clock" | "alarm" | "stopwatch" | "countdown" | "world";
 
+type City = {
+  name: string;
+  city: string;
+  zone: string;
+};
+
 type Alarm = {
   id: number;
   time: string;
@@ -13,20 +19,35 @@ type Alarm = {
   lastFired: string;
 };
 
+const worldOptions: City[] = [
+  { name: "ประเทศไทย", city: "Bangkok", zone: "Asia/Bangkok" },
+  { name: "ญี่ปุ่น", city: "Tokyo", zone: "Asia/Tokyo" },
+  { name: "เกาหลีใต้", city: "Seoul", zone: "Asia/Seoul" },
+  { name: "จีน", city: "Shanghai", zone: "Asia/Shanghai" },
+  { name: "ฮ่องกง", city: "Hong Kong", zone: "Asia/Hong_Kong" },
+  { name: "สิงคโปร์", city: "Singapore", zone: "Asia/Singapore" },
+  { name: "อินเดีย", city: "New Delhi", zone: "Asia/Kolkata" },
+  { name: "อังกฤษ", city: "London", zone: "Europe/London" },
+  { name: "ฝรั่งเศส", city: "Paris", zone: "Europe/Paris" },
+  { name: "เยอรมนี", city: "Berlin", zone: "Europe/Berlin" },
+  { name: "รัสเซีย", city: "Moscow", zone: "Europe/Moscow" },
+  { name: "สหรัฐอเมริกา", city: "New York", zone: "America/New_York" },
+  { name: "สหรัฐอเมริกา", city: "Los Angeles", zone: "America/Los_Angeles" },
+  { name: "สหรัฐอเมริกา", city: "Chicago", zone: "America/Chicago" },
+  { name: "แคนาดา", city: "Toronto", zone: "America/Toronto" },
+  { name: "ออสเตรเลีย", city: "Sydney", zone: "Australia/Sydney" },
+  { name: "นิวซีแลนด์", city: "Auckland", zone: "Pacific/Auckland" },
+  { name: "สหรัฐอาหรับเอมิเรตส์", city: "Dubai", zone: "Asia/Dubai" },
+  { name: "ตุรกี", city: "Istanbul", zone: "Europe/Istanbul" },
+  { name: "บราซิล", city: "Sao Paulo", zone: "America/Sao_Paulo" },
+];
+
 const tabs: { id: Tab; label: string; icon: string }[] = [
   { id: "clock", label: "นาฬิกา", icon: "◷" },
   { id: "alarm", label: "นาฬิกาปลุก", icon: "⏰" },
   { id: "stopwatch", label: "จับเวลา", icon: "⏱" },
   { id: "countdown", label: "นับถอยหลัง", icon: "⌛" },
   { id: "world", label: "เวลาโลก", icon: "◎" },
-];
-
-const zones = [
-  { name: "ประเทศไทย", city: "Bangkok", zone: "Asia/Bangkok" },
-  { name: "ญี่ปุ่น", city: "Tokyo", zone: "Asia/Tokyo" },
-  { name: "อังกฤษ", city: "London", zone: "Europe/London" },
-  { name: "สหรัฐอเมริกา", city: "New York", zone: "America/New_York" },
-  { name: "เกาหลีใต้", city: "Seoul", zone: "Asia/Seoul" },
 ];
 
 function formatTime(date: Date) {
@@ -53,16 +74,60 @@ export default function Home() {
   const [tab, setTab] = useState<Tab>("clock");
   const [now, setNow] = useState<Date | null>(null);
   const [notice, setNotice] = useState("");
+
+  // Alarm
   const [alarms, setAlarms] = useState<Alarm[]>([]);
   const [alarmTime, setAlarmTime] = useState("07:00");
   const [alarmMessage, setAlarmMessage] = useState("");
 
+  // World Clock
+  const [worldSearch, setWorldSearch] = useState("");
+  const [selectedWorlds, setSelectedWorlds] = useState<City[]>([
+    worldOptions[0],
+    worldOptions[1],
+    worldOptions[7],
+  ]);
+
+  const filteredWorlds = worldOptions.filter((city) => {
+    const keyword = worldSearch.trim().toLowerCase();
+
+    return (
+      keyword.length > 0 &&
+      (
+        city.name.toLowerCase().includes(keyword) ||
+        city.city.toLowerCase().includes(keyword) ||
+        city.zone.toLowerCase().includes(keyword)
+      ) &&
+      !selectedWorlds.some((item) => item.zone === city.zone)
+    );
+  });
+
+  function addWorld(city: City) {
+    setSelectedWorlds((old) => {
+      if (old.some((item) => item.zone === city.zone)) {
+        return old;
+      }
+      return [...old, city];
+    });
+
+    setWorldSearch("");
+    setNotice(`เพิ่ม ${city.city} เรียบร้อยแล้ว`);
+  }
+
+  function removeWorld(zone: string) {
+    setSelectedWorlds((old) =>
+      old.filter((city) => city.zone !== zone)
+    );
+  }
+
+  // Stopwatch
   const [running, setRunning] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [laps, setLaps] = useState<number[]>([]);
   const stopwatchStart = useRef(0);
   const elapsedBeforeStart = useRef(0);
 
+  // Countdown
   const [hours, setHours] = useState("00");
   const [minutes, setMinutes] = useState("01");
   const [seconds, setSeconds] = useState("00");
@@ -70,6 +135,7 @@ export default function Home() {
   const [counting, setCounting] = useState(false);
   const countdownEnd = useRef(0);
 
+  // Clock update
   useEffect(() => {
     setNow(new Date());
 
@@ -80,7 +146,7 @@ export default function Home() {
     return () => window.clearInterval(id);
   }, []);
 
-  // Stopwatch
+  // Stopwatch update
   useEffect(() => {
     if (!running) return;
 
@@ -94,7 +160,7 @@ export default function Home() {
     return () => window.clearInterval(id);
   }, [running]);
 
-  // Countdown
+  // Countdown update
   useEffect(() => {
     if (!counting) return;
 
@@ -161,6 +227,7 @@ export default function Home() {
     return () => window.clearInterval(id);
   }, []);
 
+  // Add alarm
   function addAlarm(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
 
@@ -179,6 +246,7 @@ export default function Home() {
     setNotice("เพิ่มนาฬิกาปลุกเรียบร้อย");
   }
 
+  // Stopwatch functions
   function startStopwatch() {
     stopwatchStart.current = Date.now();
     elapsedBeforeStart.current = elapsed;
@@ -202,6 +270,7 @@ export default function Home() {
     setLaps([]);
   }
 
+  // Countdown functions
   function startCountdown() {
     if (counting) return;
 
@@ -211,12 +280,25 @@ export default function Home() {
       return;
     }
 
-    const total =
-      (Number(hours) * 3600 +
-        Number(minutes) * 60 +
-        Number(seconds)) * 1000;
+    const h = Number(hours);
+    const m = Number(minutes);
+    const s = Number(seconds);
 
-    if (!Number.isFinite(total) || total <= 0) {
+    if (
+      !Number.isInteger(h) ||
+      !Number.isInteger(m) ||
+      !Number.isInteger(s) ||
+      h < 0 || h > 99 ||
+      m < 0 || m > 59 ||
+      s < 0 || s > 59
+    ) {
+      setNotice("กรุณากรอกเวลาให้ถูกต้อง");
+      return;
+    }
+
+    const total = (h * 3600 + m * 60 + s) * 1000;
+
+    if (total <= 0) {
       setNotice("กรุณากำหนดเวลามากกว่า 0");
       return;
     }
@@ -249,7 +331,6 @@ export default function Home() {
       <header className="topbar">
         <div className="brand">
           <div className="brand-icon">◷</div>
-
           <div>
             <h1>DARK<span>TIME</span></h1>
             <p>YOUR TIME. YOUR CONTROL.</p>
@@ -263,11 +344,9 @@ export default function Home() {
 
       <section className="welcome">
         <p className="eyebrow">WELCOME TO DARK TIME</p>
-
         <h2>
           จัดการเวลาของคุณ <span>อย่างอิสระ</span>
         </h2>
-
         <p className="sub">
           เว็บไซต์นาฬิกาดิจิทัลและเครื่องมือจัดการเวลา
         </p>
@@ -297,9 +376,9 @@ export default function Home() {
 
       <section className="content">
 
+        {/* DIGITAL CLOCK */}
         {tab === "clock" && (
           <div className="panel main-clock">
-
             <div className="panel-heading">
               <span>◷ DIGITAL CLOCK</span>
               <span className="live"><i /> LIVE</span>
@@ -330,9 +409,7 @@ export default function Home() {
                     transform: `rotate(${i * 30}deg) translateY(-126px)`,
                   }}
                 >
-                  <span
-                    style={{ transform: `rotate(${-i * 30}deg)` }}
-                  >
+                  <span style={{ transform: `rotate(${-i * 30}deg)` }}>
                     {i === 0 ? 12 : i}
                   </span>
                 </div>
@@ -362,9 +439,9 @@ export default function Home() {
           </div>
         )}
 
+        {/* ALARM */}
         {tab === "alarm" && (
           <div className="panel tool-panel">
-
             <div className="panel-heading">
               <span>⏰ ALARM CLOCK</span>
               <span className="small-tag">
@@ -379,7 +456,6 @@ export default function Home() {
 
             <form className="alarm-form" onSubmit={addAlarm}>
               <label htmlFor="alarm-time">เลือกเวลา</label>
-
               <input
                 id="alarm-time"
                 type="time"
@@ -391,7 +467,6 @@ export default function Home() {
               <label htmlFor="alarm-message">
                 ข้อความแจ้งเตือน
               </label>
-
               <input
                 id="alarm-message"
                 type="text"
@@ -417,10 +492,7 @@ export default function Home() {
                     <p>{alarm.message || "ไม่มีข้อความ"}</p>
                   </div>
 
-                  <label
-                    className="switch"
-                    aria-label="เปิดหรือปิดนาฬิกาปลุก"
-                  >
+                  <label className="switch">
                     <input
                       type="checkbox"
                       checked={alarm.active}
@@ -452,15 +524,14 @@ export default function Home() {
             </div>
 
             <p className="hint">
-              หมายเหตุ: ต้องเปิดเว็บไซต์ค้างไว้
-              เพื่อให้ระบบตรวจสอบเวลาปลุก
+              หมายเหตุ: ต้องเปิดเว็บไซต์ค้างไว้เพื่อให้ระบบตรวจสอบเวลาปลุก
             </p>
           </div>
         )}
 
+        {/* STOPWATCH */}
         {tab === "stopwatch" && (
           <div className="panel tool-panel center-panel">
-
             <div className="panel-heading">
               <span>⏱ STOPWATCH</span>
               <span className="small-tag">CHRONOMETER</span>
@@ -507,9 +578,9 @@ export default function Home() {
           </div>
         )}
 
+        {/* COUNTDOWN */}
         {tab === "countdown" && (
           <div className="panel tool-panel center-panel">
-
             <div className="panel-heading">
               <span>⌛ COUNTDOWN</span>
               <span className="small-tag">TIMER</span>
@@ -588,31 +659,78 @@ export default function Home() {
           </div>
         )}
 
+        {/* WORLD CLOCK: SEARCH, ADD, DELETE */}
         {tab === "world" && (
           <div className="panel tool-panel">
-
             <div className="panel-heading">
               <span>◎ WORLD CLOCK</span>
-              <span className="small-tag">GLOBAL TIME</span>
+              <span className="small-tag">
+                {selectedWorlds.length} CITIES
+              </span>
             </div>
 
-            <h2>เวลาทั่วโลก</h2>
+            <h2>นาฬิกาโลก</h2>
             <p className="sub">
-              เปรียบเทียบเวลาของแต่ละประเทศ
+              ค้นหาและเพิ่มเวลาของเมืองต่าง ๆ ทั่วโลก
             </p>
 
+            <div className="world-search">
+              <input
+                type="text"
+                placeholder="🔍 ค้นหาประเทศหรือเมือง เช่น Japan, Tokyo..."
+                value={worldSearch}
+                onChange={(e) => setWorldSearch(e.target.value)}
+              />
+            </div>
+
+            {worldSearch.trim() !== "" && (
+              <div className="search-results">
+                {filteredWorlds.length > 0 ? (
+                  filteredWorlds.map((city) => (
+                    <div className="search-result" key={city.zone}>
+                      <div>
+                        <strong>{city.name}</strong>
+                        <p>{city.city}</p>
+                      </div>
+
+                      <button
+                        className="add-world-btn"
+                        onClick={() => addWorld(city)}
+                      >
+                        ＋ เพิ่ม
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty">
+                    ไม่พบเมืองที่ค้นหา หรือเมืองนี้ถูกเพิ่มแล้ว
+                  </p>
+                )}
+              </div>
+            )}
+
             <div className="world-list">
-              {zones.map((z) => (
-                <div className="world-item" key={z.zone}>
+              <h3 className="world-title">
+                รายการนาฬิกาของฉัน
+              </h3>
+
+              {selectedWorlds.length === 0 && (
+                <p className="empty">
+                  ยังไม่มีเมือง กรุณาค้นหาและเพิ่มเมือง
+                </p>
+              )}
+
+              {selectedWorlds.map((city) => (
+                <div className="world-item" key={city.zone}>
                   <div>
-                    <strong>{z.name}</strong>
-                    <p>{z.city}</p>
+                    <strong>{city.name}</strong>
+                    <p>{city.city}</p>
                   </div>
 
                   <div className="world-time">
                     {now
                       ? now.toLocaleTimeString("th-TH", {
-                          timeZone: z.zone,
+                          timeZone: city.zone,
                           hour: "2-digit",
                           minute: "2-digit",
                           second: "2-digit",
@@ -623,18 +741,28 @@ export default function Home() {
                     <small>
                       {now
                         ? now.toLocaleDateString("th-TH", {
-                            timeZone: z.zone,
+                            timeZone: city.zone,
+                            weekday: "short",
                             day: "numeric",
                             month: "short",
+                            year: "numeric",
                           })
                         : ""}
                     </small>
                   </div>
+
+                  <button
+                    className="delete-world-btn"
+                    onClick={() => removeWorld(city.zone)}
+                  >
+                    ลบ
+                  </button>
                 </div>
               ))}
             </div>
           </div>
         )}
+
       </section>
 
       <footer>
@@ -644,6 +772,7 @@ export default function Home() {
         <p>© 2026 DARK TIME | Created with Next.js</p>
         <p>เว็บไซต์จัดการเวลาในชีวิตประจำวัน</p>
       </footer>
+
     </main>
   );
 }

@@ -1,10 +1,17 @@
 
-import "./globals.css";
 import type { Metadata } from "next";
+import "./globals.css";
 
 export const metadata: Metadata = {
   title: "DARK TIME | Digital Clock",
-  description: "เว็บไซต์นาฬิกาดิจิทัลและเครื่องมือจัดการเวลา",
+  description:
+    "เว็บไซต์นาฬิกาดิจิทัล นาฬิกาปลุก จับเวลา นับถอยหลัง และนาฬิกาโลก",
+  keywords: [
+    "DARK TIME",
+    "Digital Clock",
+    "World Clock",
+    "Next.js",
+  ],
 };
 
 export default function RootLayout({
